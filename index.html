@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.8.0/suncalc.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            /* Theme Variables */
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-color: #818cf8;
+            --progress-bar-color: #6366f1;
+            --sky-day: #87CEEB;
+            --sky-night: #0b1a3d;
+            --sunrise-color: #f39c12;
+            --sunset-color: #d35400;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: 0;
+            position: relative;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .card-content {
+            flex-grow: 1;
+            overflow: hidden;
+            min-height: 0;
+            position: relative;
+        }
+
+        .card-content-inner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+        }
+
+        .card-footer {
+            flex-shrink: 0;
+            padding-top: 0.75rem;
+        }
+
+        .progress-bar-bottom {
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--card-bg);
+            border-radius: 0 0 16px 16px;
+            overflow: hidden;
+        }
+
+        .progress-bar-bottom>div {
+            height: 100%;
+            background-color: var(--progress-bar-color);
+            transition: width 0.3s ease-in-out;
+        }
+
+        .main-content {
+            height: calc(100vh - 85px);
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .grid-col {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* *** CHANGE ***: Adjusted calendar and timer heights */
+        #top-priorities-card,
+        #calls-emails-card {
+            height: 25%;
+        }
+
+        #calendar-card {
+            height: 33%;
+        }
+
+        /* Increased from 30% */
+        #timer-card {
+            height: 17%;
+        }
+
+        /* Decreased from 20% */
+        #general-todo-card {
+            height: 45%;
+        }
+
+        #nutrition-card {
+            height: 30%;
+        }
+
+        #appointments-card {
+            height: 25%;
+        }
+
+        #daily-schedule-card {
+            height: 50%;
+        }
+
+        #health-fitness-card,
+        #expense-tracker-card {
+            height: 25%;
+        }
+
+        #notes-card {
+            height: 50%;
+        }
+
+        #notes-tomorrow-card {
+            height: 30%;
+        }
+
+        #rate-day-card {
+            height: 20%;
+        }
+
+        .rating-icon {
+            transition: all 0.2s;
+            cursor: pointer;
+            color: #4a4a4a;
+        }
+
+        .rating-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .rating-icon.selected {
+            color: var(--color);
+        }
+
+        .rating-mood {
+            transition: all 0.2s;
+            cursor: pointer;
+            color: #4a4a4a;
+        }
+
+        .rating-mood:hover {
+            transform: scale(1.1);
+            color: var(--mood-color);
+            opacity: 0.8;
+        }
+
+        .rating-mood.selected {
+            color: var(--mood-color);
+            transform: scale(1.1);
+        }
+
+        .time-bars-aside {
+            position: relative;
+        }
+
+        .time-bars-aside:hover .time-bars-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .time-bars-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.2s ease-in-out;
+            position: absolute;
+            right: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #111;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            width: 250px;
+            z-index: 50;
+            margin-right: 1rem;
+        }
+
+        .time-bar-wrapper {
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            gap: 4px;
+        }
+
+        .time-bar-scale {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .time-bar-container {
+            width: 15px;
+            height: 100%;
+            border-radius: 10px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .time-marker {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+        }
+
+        .time-marker.sun-marker {
+            background: var(--color);
+        }
+
+        .time-marker.current-time-marker {
+            z-index: 20;
+        }
+
+        .current-time-peg {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            border: 2px solid var(--bg-color);
+            box-shadow: 0 0 5px white;
+        }
+
+        .current-time-label {
+            position: absolute;
+            z-index: 21;
+            font-size: 10px;
+            background-color: var(--bg-color);
+            padding: 1px 4px;
+            border-radius: 4px;
+            color: white;
+            right: 100%;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .timezone-label {
+            font-size: 10px;
+            font-weight: 500;
+            text-align: center;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            color: var(--text-secondary);
+        }
+
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .notes-textarea {
+            background-color: transparent;
+            width: 100%;
+            height: 100%;
+            resize: none;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .calendar-day-name {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .calendar-day {
+            font-size: 12px;
+            text-align: center;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid transparent;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            margin: 0 auto;
+        }
+
+        .calendar-day:hover {
+            background-color: #333;
+        }
+
+        .calendar-day.other-month {
+            color: #555;
+        }
+
+        .calendar-day.today {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .calendar-day.selected {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            font-weight: bold;
+        }
+
+        /* *** CHANGE ***: Removed .timer-tab styles, updated .timer-button */
+        .timer-button {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 6px 10px;
+            transition: all 0.2s;
+            font-size: 12px;
+            width: 40px;
+            /* Set fixed width for icon buttons */
+            text-align: center;
+        }
+
+        .timer-button:hover {
+            background-color: #444;
+        }
+
+        .timer-button.active {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen text-sm">
+
+    <header class="flex-shrink-0 p-4 flex items-center justify-between border-b border-gray-700">
+        <h1 class="text-2xl font-bold">Daily Planner</h1>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <label for="date-picker" class="cursor-pointer"><i
+                        class="fa-solid fa-calendar-days text-xl text-gray-400 hover:text-white"></i></label>
+                <input type="date" id="date-picker" class="opacity-0 w-0 h-0 absolute">
+                <span id="date-display" class="font-semibold text-lg"></span>
+            </div>
+            <div id="day-list" class="flex items-center gap-3 bg-gray-900 p-1 rounded-full"></div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="w-64">
+                <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Overall Progress</span><span
+                        id="overall-progress-text">0/0 Tasks</span></div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div id="overall-progress-bar" class="bg-indigo-500 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <button id="settings-btn" class="text-gray-400 hover:text-white"><i
+                    class="fa-solid fa-gear text-xl"></i></button>
+        </div>
+    </header>
+
+    <div class="flex flex-grow overflow-hidden">
+        <main class="flex-grow p-4 main-content">
+            <div class="grid-col">
+                <div class="card" id="top-priorities-card"></div>
+                <div class="card" id="calls-emails-card"></div>
+                <div class="card" id="calendar-card"></div>
+                <div class="card" id="timer-card"></div>
+            </div>
+            <div class="grid-col">
+                <div class="card" id="general-todo-card"></div>
+                <div class="card" id="nutrition-card"></div>
+                <div class="card" id="appointments-card"></div>
+            </div>
+            <div class="grid-col">
+                <div class="card" id="daily-schedule-card"></div>
+                <div class="card" id="health-fitness-card"></div>
+                <div class="card" id="expense-tracker-card"></div>
+            </div>
+            <div class="grid-col">
+                <div class="card" id="notes-card"></div>
+                <div class="card" id="notes-tomorrow-card"></div>
+                <div class="card" id="rate-day-card"></div>
+            </div>
+        </main>
+
+        <aside class="flex-shrink-0 p-4 flex flex-row items-stretch justify-start gap-4 time-bars-aside">
+            <div class="h-full time-bar-wrapper flex-grow">
+                <div class="timezone-label" id="local-timezone-label"></div>
+                <div id="local-time-bar" class="time-bar-container"></div>
+            </div>
+            <div class="h-full time-bar-wrapper flex-grow">
+                <div class="timezone-label" id="second-timezone-label"></div>
+                <div id="second-time-bar" class="time-bar-container"></div>
+            </div>
+            <div id="time-bars-tooltip" class="time-bars-tooltip"></div>
+        </aside>
+    </div>
+
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="help-modal-title" class="text-xl font-bold mb-4"></h2>
+            <p id="help-modal-content" class="text-gray-300"></p><button id="help-modal-close"
+                class="mt-6 bg-indigo-500 px-4 py-2 rounded-lg w-full">Close</button>
+        </div>
+    </div>
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Settings</h2>
+            <div><label for="timezone-select" class="block mb-2 text-sm font-medium text-gray-300">Second
+                    Timezone</label><select id="timezone-select"
+                    class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"></select>
+            </div><button id="settings-modal-close" class="mt-6 bg-indigo-500 px-4 py-2 rounded-lg w-full">Save &
+                Close</button>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="modal-overlay visible">
+        <div class="modal-content">
+            <h2 id="auth-title" class="text-xl font-bold mb-4">Login</h2>
+            <div class="flex flex-col gap-3"><input type="text" id="auth-username" placeholder="Username"
+                    class="bg-gray-700 text-white p-2 rounded"><input type="password" id="auth-password"
+                    placeholder="Password" class="bg-gray-700 text-white p-2 rounded"><button id="auth-submit"
+                    class="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded font-bold">Login</button>
+                <p class="text-xs text-center text-gray-400 cursor-pointer hover:text-white" id="auth-switch">Don't have
+                    an account? Register</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Menu in Header (will be injected via JS) -->
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let currentUser = null;
+        let authToken = localStorage.getItem('authToken');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            if (authToken) {
+                document.getElementById('auth-modal').classList.remove('visible');
+            }
+        });
+
+        const initApp = () => {
+            // ... existing initialization ... 
+
+            const state = {
+                date: new Date(),
+                lists: { priorities: [], calls: [], appointments: [], generalTodo: [], schedule: [], fitness: [], expenses: [] },
+                food: { breakfast: { text: '', time: '' }, lunch: { text: '', time: '' }, dinner: { text: '', time: '' } },
+                water: 8,
+                notes: { today: '', tomorrow: '', todayFontSize: '14', tomorrowFontSize: '14' },
+                ratings: { productivity: 0, mood: 0, health: 0 },
+                sleepDuration: { hours: 0, minutes: 0 },
+                currency: '₹',
+                secondTimezone: 'Europe/Paris',
+                timezones: [],
+                localTimezone: 'Asia/Kolkata',
+                userCoords: { lat: 20.5937, lon: 78.9629 },
+                // *** CHANGE ***: Refactored timer state
+                timer: {
+                    pomodoro: {
+                        duration: 25 * 60, // seconds
+                        remaining: 25 * 60,
+                        running: false,
+                        intervalId: null
+                    },
+                    stopwatch: {
+                        elapsed: 0,
+                        running: false,
+                        intervalId: null
+                    }
+                }
+            };
+
+            const ICONS = {
+                call: 'fa-solid fa-phone', email: 'fa-solid fa-envelope', office: 'fa-solid fa-building', home: 'fa-solid fa-house', doctor: 'fa-solid fa-user-doctor', bike: 'fa-solid fa-bicycle', car: 'fa-solid fa-car', mobile: 'fa-solid fa-mobile-screen-button', laptop: 'fa-solid fa-laptop', cloths: 'fa-solid fa-shirt', sport: 'fa-solid fa-basketball', clock: 'fa-solid fa-clock', walk: 'fa-solid fa-person-walking', run: 'fa-solid fa-person-running', cycle: 'fa-solid fa-person-biking', swim: 'fa-solid fa-person-swimming', jumprope: 'fa-solid fa-weight-hanging', gym: 'fa-solid fa-dumbbell'
+            };
+            const CURRENCIES = ['$', '€', '£', '¥', '₹', '₽', '₩', '฿', 'CHF'];
+            const HELP_TEXT = {
+                'top-priorities-card': { title: 'Top Priorities', text: 'List your top 3-5 most important tasks. Max entries: 10.' },
+                'calls-emails-card': { title: 'Calls/Emails', text: 'Track important calls or emails. Max entries: 15.' },
+                'appointments-card': { title: 'Appointments', text: 'Keep track of meetings. Max entries: 15.' },
+                'general-todo-card': { title: 'General To-Do List', text: 'A comprehensive list for all other tasks. Max entries: 20.' },
+                'nutrition-card': { title: 'Nutrition', text: 'Plan meals and track water intake.' },
+                'daily-schedule-card': { title: 'Daily Schedule', text: 'Block out your day. Max entries: 20.' },
+                'health-fitness-card': { title: 'Health & Fitness', text: 'Log workouts and sleep. Max entries: 10.' },
+                'expense-tracker-card': { title: 'Expense Tracker', text: 'Monitor daily spending. Max entries: 15.' },
+                'notes-card': { title: 'Notes', text: 'A space for your thoughts, ideas, or meeting notes.' },
+                'notes-tomorrow-card': { title: 'Notes for Tomorrow', text: 'Get a head start on tomorrow.' },
+                'rate-day-card': { title: 'Rate Your Day', text: 'Reflect on your day to identify patterns.' }
+            };
+            const TZ_COORDS = { 'London': { lat: 51.50, lon: -0.12 }, 'Tokyo': { lat: 35.68, lon: 139.69 }, 'New_York': { lat: 40.71, lon: -74.00 }, 'Sydney': { lat: -33.86, lon: 151.20 }, 'Paris': { lat: 48.85, lon: 2.35 }, 'Moscow': { lat: 55.75, lon: 37.61 } };
+
+            const isToday = (d) => d.toDateString() === new Date().toDateString();
+
+            const createHeader = (title, helpId, addItemConfig, listName) => {
+                const progressText = listName ? `<span id="${listName}-progress-text" class="text-xs text-gray-400 font-normal"></span>` : '';
+                const addItemButton = addItemConfig ? `<button onclick="addItem('${addItemConfig.listName}', ${addItemConfig.limit})" class="text-indigo-400 hover:text-indigo-300"><i class="fa-solid fa-plus"></i></button>` : '';
+                return `<div class="card-header"><span class="font-semibold flex items-center gap-2">${title} ${progressText}</span><div class="flex items-center gap-4"><i data-help-id="${helpId}" class="fa-regular fa-circle-question text-gray-400 cursor-pointer hover:text-white"></i>${addItemButton}</div></div>`;
+            };
+            const createProgressBar = (listName) => `<div class="progress-bar-bottom"><div id="${listName}-progress"></div></div>`;
+            const createDurationPicker = (id, value, onChange) => {
+                let hours = value.hours || 0; let minutes = value.minutes || 0;
+                let hourOptions = [...Array(24).keys()].map(h => `<option value="${h}" ${h === hours ? 'selected' : ''}>${h}h</option>`).join('');
+                let minuteOptions = [...Array(12).keys()].map(m => m * 5).map(m => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${m}m</option>`).join('');
+                return `<select onchange="${onChange}" data-type="hours" class="bg-gray-800 border-gray-600 rounded text-xs p-0.5">${hourOptions}</select><select onchange="${onChange}" data-type="minutes" class="bg-gray-800 border-gray-600 rounded text-xs p-0.5">${minuteOptions}</select>`;
+            };
+            const getFitnessFooterHTML = () => {
+                const totalMinutes = state.lists.fitness.reduce((acc, item) => acc + ((item.duration.hours || 0) * 60) + (item.duration.minutes || 0), 0);
+                const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60;
+                return `<div class="text-xs flex justify-between items-center"><div class="flex items-center gap-2"><span>Sleep:</span>${createDurationPicker('sleep-duration', state.sleepDuration, 'updateSleepDuration(this)')}</div><span>Total: <strong>${hours}h ${minutes}m</strong></span></div>`;
+            };
+            const getExpenseFooterHTML = () => {
+                const total = state.lists.expenses.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+                return `<div class="text-xs flex justify-between items-center"><div class="flex items-center gap-1"><span>Currency:</span><select onchange="updateCurrency(this.value)" class="bg-gray-800 border-gray-600 rounded text-xs p-0.5">${CURRENCIES.map(c => `<option value="${c}" ${c === state.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div><span>Total: <strong>${state.currency}${total.toFixed(2)}</strong></span></div>`;
+            };
+            const formatDate = (date) => {
+                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                return `${String(date.getDate()).padStart(2, '0')}-${months[date.getMonth()]}-${date.getFullYear()}`;
+            };
+
+            const renderHeader = () => {
+                const datePicker = document.getElementById('date-picker');
+                document.getElementById('date-display').textContent = formatDate(state.date);
+                datePicker.value = state.date.toISOString().split('T')[0];
+                datePicker.onchange = (e) => {
+                    if (e.target.value) {
+                        state.date = new Date(e.target.value + 'T12:00:00');
+                        renderHeader();
+                        updateTimeBars();
+                    }
+                };
+                const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                const isTodayFlag = isToday(state.date);
+                document.getElementById('day-list').innerHTML = days.map((day, index) => `<span class="px-3 py-1 text-xs font-semibold rounded-full cursor-default ${index === state.date.getDay() && isTodayFlag ? 'bg-indigo-600 text-white' : 'text-gray-400'}">${day}</span>`).join('');
+
+                renderCalendar();
+            };
+
+            const renderListSection = (config) => {
+                const container = document.getElementById(config.id); if (!container) return;
+                const items = state.lists[config.listName] || [];
+                let itemsHtml = items.map((item, index) => {
+                    const checked = item.completed ? 'checked' : '';
+                    const textDecoration = item.completed ? 'line-through text-gray-500' : '';
+                    const hasCheckbox = config.hasCheckbox !== false;
+
+                    let iconSelector = '';
+                    if (config.icons) {
+                        iconSelector = `<div class="relative group"><i class="${ICONS[item.icon]} text-gray-400 w-4 text-center"></i><select onchange="updateItemIcon('${config.listName}', ${index}, this.value)" class="absolute inset-0 opacity-0 cursor-pointer text-black">${Object.keys(config.icons).map(key => `<option value="${key}" ${item.icon === key ? 'selected' : ''}>${key}</option>`).join('')}</select></div>`;
+                    }
+
+                    let extraInput = '';
+                    if (config.hasTime) extraInput = `<input type="time" value="${item.time || ''}" onchange="updateItemTime('${config.listName}', ${index}, this.value)" class="bg-transparent text-gray-400 text-xs border-none focus:ring-0 w-20">`;
+                    else if (config.listName === 'fitness') extraInput = createDurationPicker(`fitness-${index}`, item.duration || { hours: 0, minutes: 0 }, `updateItemDuration('${config.listName}', ${index}, this)`);
+                    else if (config.listName === 'expenses') extraInput = `<span class="text-gray-500">${state.currency}</span><input type="number" step="0.01" value="${item.amount || ''}" onchange="updateItemAmount('${config.listName}', ${index}, this.value)" class="bg-transparent text-right text-gray-400 text-xs w-20 border-0 border-b border-gray-700 focus:border-indigo-500 focus:ring-0 p-0.5" placeholder="0.00">`;
+
+                    return `<div class="flex items-center gap-2 py-1">
+                          <span class="text-xs text-gray-500 w-4">${index + 1}.</span>
+                          ${hasCheckbox ? `<input type="checkbox" ${checked} onchange="toggleItemComplete('${config.listName}', ${index})" class="form-checkbox h-4 w-4 rounded bg-gray-800 border-gray-600 text-indigo-600 focus:ring-indigo-500">` : `<div class="w-4 h-4"></div>`}
+                          <input type="text" value="${item.text || ''}" onchange="updateItemText('${config.listName}', ${index}, this.value)" class="flex-grow bg-transparent border-0 border-b border-gray-700 focus:border-indigo-500 focus:ring-0 p-0.5 text-sm ${textDecoration}" placeholder="${config.placeholder}">
+                          <div class="flex gap-1 items-center">${iconSelector}${extraInput}</div>
+                          <button onclick="deleteItem('${config.listName}', ${index})" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-trash-can w-4"></i></button>
+                        </div>`;
+                }).join('');
+                container.innerHTML = `${createHeader(config.title, config.id, { listName: config.listName, limit: config.limit }, config.listName)}<div class="card-content"><div class="card-content-inner custom-scrollbar pr-2">${itemsHtml || `<p class="text-xs text-gray-500 text-center py-4">No items yet.</p>`}</div></div><div class="card-footer">${config.renderFooter ? config.renderFooter() : ''}</div>${config.hasProgressBar !== false ? createProgressBar(config.listName) : ''}`;
+            };
+
+            const renderCalendar = () => {
+                const container = document.getElementById('calendar-card');
+                if (!container) return;
+
+                const d = new Date(state.date);
+                const today = new Date();
+                const year = d.getFullYear();
+                const month = d.getMonth();
+                const monthName = d.toLocaleString('default', { month: 'long' });
+
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                let daysHtml = '';
+                const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                daysHtml += dayNames.map(day => `<div class="calendar-day-name">${day}</div>`).join('');
+
+                for (let i = 0; i < firstDay; i++) {
+                    daysHtml += `<div></div>`;
+                }
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    let classes = 'calendar-day';
+                    if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                        classes += ' today';
+                    }
+                    if (day === state.date.getDate() && month === state.date.getMonth() && year === state.date.getFullYear()) {
+                        classes += ' selected';
+                    }
+                    daysHtml += `<div class="${classes}" onclick="selectCalendarDate(${day})">${day}</div>`;
+                }
+
+                container.innerHTML = `
+                <div class="card-header" style="margin-bottom: 0.5rem; padding-bottom: 0.5rem;">
+                    <span class="font-semibold">${monthName} ${year}</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="goToToday()" class="text-xs bg-gray-700 px-2 py-0.5 rounded-md hover:bg-gray-600">Today</button>
+                        <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button onclick="changeMonth(1)" class="text-gray-400 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-content-inner custom-scrollbar pr-2">
+                        <div class="calendar-grid">
+                            ${daysHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            };
+
+            const formatTimer = (seconds) => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            };
+
+            // *** CHANGE ***: Rewritten to show both timers
+            const renderTimerCard = () => {
+                const container = document.getElementById('timer-card');
+                if (!container) return;
+                const { pomodoro, stopwatch } = state.timer;
+
+                container.innerHTML = `
+                <div class="card-content h-full">
+                    <div class="card-content-inner flex flex-col justify-around h-full">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold"><i class="fa-solid fa-clock mr-2 text-indigo-400"></i>Pomo</span>
+                            <span class="text-3xl font-bold">${formatTimer(pomodoro.remaining)}</span>
+                            <div class="flex gap-2">
+                                ${!pomodoro.running ? `
+                                    <button onclick="startTimer('pomodoro')" class="timer-button"><i class="fa-solid fa-play"></i></button>
+                                ` : `
+                                    <button onclick="pauseTimer('pomodoro')" class="timer-button active"><i class="fa-solid fa-pause"></i></button>
+                                `}
+                                <button onclick="resetTimer('pomodoro')" class="timer-button"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold"><i class="fa-solid fa-stopwatch mr-2 text-green-400"></i>Watch</span>
+                            <span class="text-3xl font-bold">${formatTimer(stopwatch.elapsed)}</span>
+                            <div class="flex gap-2">
+                                ${!stopwatch.running ? `
+                                    <button onclick="startTimer('stopwatch')" class="timer-button"><i class="fa-solid fa-play"></i></button>
+                                ` : `
+                                    <button onclick="pauseTimer('stopwatch')" class="timer-button active"><i class="fa-solid fa-pause"></i></button>
+                                `}
+                                <button onclick="resetTimer('stopwatch')" class="timer-button"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            };
+
+            const renderAllSections = () => {
+                renderListSection({ id: 'top-priorities-card', listName: 'priorities', title: 'Top Priorities', placeholder: 'Your top priority...', limit: 10 });
+                renderListSection({ id: 'calls-emails-card', listName: 'calls', title: 'Calls/Emails', placeholder: 'Call John Doe...', limit: 15, icons: { call: ICONS.call, email: ICONS.email } });
+                renderListSection({ id: 'appointments-card', listName: 'appointments', title: 'Appointments', placeholder: 'Dentist...', limit: 15, icons: { office: ICONS.office, home: ICONS.home }, hasTime: true });
+                renderListSection({ id: 'general-todo-card', listName: 'generalTodo', title: 'General To-Do', placeholder: 'Add a task...', limit: 20, icons: { office: ICONS.office, home: ICONS.home, doctor: ICONS.doctor, bike: ICONS.bike, car: ICONS.car, mobile: ICONS.mobile, laptop: ICONS.laptop, cloths: ICONS.cloths, sport: ICONS.sport, clock: ICONS.clock } });
+                renderListSection({ id: 'daily-schedule-card', listName: 'schedule', title: 'Daily Schedule', placeholder: 'Morning stand-up...', limit: 20, hasTime: true });
+                renderListSection({ id: 'health-fitness-card', listName: 'fitness', title: 'Health & Fitness', placeholder: 'Activity...', limit: 10, icons: { walk: ICONS.walk, run: ICONS.run, cycle: ICONS.cycle, swim: ICONS.swim, jumprope: ICONS.jumprope, gym: ICONS.gym }, hasProgressBar: false, renderFooter: getFitnessFooterHTML, hasCheckbox: false });
+                renderListSection({ id: 'expense-tracker-card', listName: 'expenses', title: 'Expense Tracker', placeholder: 'Coffee...', limit: 15, hasProgressBar: false, renderFooter: getExpenseFooterHTML, hasCheckbox: false });
+
+                renderCalendar();
+                renderTimerCard();
+                renderNutritionCard();
+                renderNotes();
+                renderRateDay();
+                updateProgress();
+            };
+
+            const renderNutritionCard = () => {
+                const maxDrops = 12;
+                let dropsHtml = [...Array(maxDrops)].map((_, i) => `<svg onclick="updateWater(${i + 1})" class="w-full h-auto cursor-pointer transition-colors ${i < state.water ? 'text-blue-400' : 'text-gray-700'} hover:text-blue-300" viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C12,4 16,7.09 16,12C16,14.73 13.94,16.44 12,16.44C10.06,16.44 8,14.73 8,12C8,7.09 12,4 12,4Z" /></svg>`).join('');
+                document.getElementById('nutrition-card').innerHTML = `${createHeader('Nutrition', 'nutrition-card')}<div class="card-content"><div class="card-content-inner"><div class="grid grid-cols-3 gap-2 text-xs">${['breakfast', 'lunch', 'dinner'].map(meal => `<div><h4 class="font-semibold mb-1 capitalize">${meal}</h4><textarea onchange="updateFoodText('${meal}', this.value)" class="w-full bg-gray-900 rounded p-1 h-12 resize-none custom-scrollbar" placeholder="What did you eat?">${state.food[meal].text}</textarea><input type="time" onchange="updateFoodTime('${meal}', this.value)" value="${state.food[meal].time}" class="w-full bg-gray-900 rounded p-1 mt-1"></div>`).join('')}</div><div class="mt-2"><h4 class="font-semibold text-xs mb-1">Water Intake (${state.water}/${maxDrops})</h4><div class="grid grid-cols-12 gap-2 items-center">${dropsHtml}</div></div></div></div>`;
+            };
+            const renderNotes = () => {
+                const render = (type) => {
+                    const idPrefix = type === 'today' ? 'notes' : 'notes-tomorrow';
+                    const container = document.getElementById(`${idPrefix}-card`);
+                    if (!container) return;
+                    const title = type === 'today' ? 'Notes' : 'Notes for Tomorrow';
+                    container.innerHTML = `<div class="card-header"><span class="font-semibold">${title}</span><div class="flex items-center gap-2"><span class="text-xs">Font:</span><select onchange="updateNoteFontSize('${type}', this.value)" class="bg-gray-700 text-xs border border-gray-600 rounded-md px-1 py-0.5 focus:outline-none">${[10, 12, 14, 16, 18].map(s => `<option value="${s}" ${s === state.notes[`${type}FontSize`] ? 'selected' : ''}>${s}px</option>`).join('')}</select><i data-help-id="${idPrefix}-card" class="fa-regular fa-circle-question text-gray-400 cursor-pointer hover:text-white"></i></div></div><div class="card-content"><textarea onchange="updateNoteText('${type}', this.value)" class="notes-textarea custom-scrollbar pr-2" style="font-size:${state.notes[`${type}FontSize`]}px;">${state.notes[type]}</textarea></div>`;
+                };
+                render('today'); render('tomorrow');
+            };
+            const renderRateDay = () => {
+                const container = document.getElementById('rate-day-card');
+                if (!container) return;
+
+                const moods = [
+                    { icon: 'fa-face-tired', color: '#71717a' },       // Gray
+                    { icon: 'fa-face-frown', color: '#f43f5e' },       // Red
+                    { icon: 'fa-face-meh', color: '#facc15' },         // Yellow
+                    { icon: 'fa-face-smile', color: '#60a5fa' },       // Blue
+                    { icon: 'fa-face-laugh-beam', color: '#34d399' }  // Green
+                ];
+
+                container.innerHTML = `${createHeader('Rate Your Day', 'rate-day-card')}
+                <div class="card-content">
+                    <div class="card-content-inner flex flex-col justify-around text-sm overflow-y-hidden overflow-x-hidden">
+                        <div class="flex items-center justify-between">
+                            <span>Productivity:</span>
+                            <div class="flex gap-2" style="--color: #facc15">${[...Array(5)].map((_, i) => `<i onclick="updateRating('productivity', ${i + 1})" class="rating-icon fa-solid fa-star text-2xl ${state.ratings.productivity > i ? 'selected' : ''}"></i>`).join('')}</div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>Mood:</span>
+                            <div class="flex gap-2 text-2xl">
+                                ${moods.map((mood, i) => `
+                                    <i onclick="updateRating('mood', ${i + 1})"
+                                       class="rating-mood fa-solid ${mood.icon} ${state.ratings.mood === i + 1 ? 'selected' : ''}"
+                                       style="--mood-color: ${mood.color};">
+                                    </i>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>Health:</span>
+                            <div class="flex gap-2" style="--color: #f43f5e;">${[...Array(5)].map((_, i) => `<i onclick="updateRating('health', ${i + 1})" class="rating-icon fa-solid fa-heart text-2xl ${state.ratings.health > i ? 'selected' : ''}"></i>`).join('')}</div>
+                        </div>
+                    </div>
+                </div>`;
+            };
+            const updateProgress = () => {
+                let total = 0, completed = 0;
+                Object.keys(state.lists).forEach(name => {
+                    const items = state.lists[name].filter(item => (item.text || '').trim() !== '');
+                    if (name !== 'expenses' && name !== 'fitness') { total += items.length; completed += items.filter(i => i.completed).length; }
+                    const bar = document.getElementById(`${name}-progress`); const text = document.getElementById(`${name}-progress-text`);
+                    if (bar) bar.style.width = `${items.length > 0 ? (items.filter(i => i.completed).length / items.length) * 100 : 0}%`;
+                    if (text) text.textContent = `(${items.filter(i => i.completed).length}/${items.length})`;
+                });
+                document.getElementById('overall-progress-text').textContent = `${completed}/${total} Tasks`;
+                document.getElementById('overall-progress-bar').style.width = `${total > 0 ? (completed / total) * 100 : 0}%`;
+            };
+
+            const getTimeData = (timezone, date, coords) => {
+                try {
+                    const getParts = (d) => new Intl.DateTimeFormat('en-US', {
+                        timeZone: timezone,
+                        year: 'numeric', month: 'numeric', day: 'numeric',
+                        hour: 'numeric', minute: 'numeric', second: 'numeric',
+                        hour12: false
+                    }).formatToParts(d).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+
+                    const currentParts = getParts(date);
+                    const dateForSunCalc = new Date(parseInt(currentParts.year), parseInt(currentParts.month) - 1, parseInt(currentParts.day), 12, 0, 0);
+                    const sunTimes = SunCalc.getTimes(dateForSunCalc, coords.lat, coords.lon);
+
+                    const toPercent = (parts) => {
+                        const hour = parts.hour === '24' ? 0 : parseInt(parts.hour);
+                        const minute = parseInt(parts.minute);
+                        const second = parseInt(parts.second);
+                        const msSinceMidnight = (hour * 3600 + minute * 60 + second) * 1000;
+                        const totalMs = 24 * 60 * 60 * 1000;
+                        return (msSinceMidnight / totalMs) * 100;
+                    };
+
+                    const formatTime = (parts) => {
+                        const hour = parts.hour === '24' ? '00' : parts.hour;
+                        return `${String(hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+                    };
+
+                    const sunriseParts = getParts(sunTimes.sunrise);
+                    const sunsetParts = getParts(sunTimes.sunset);
+
+                    return {
+                        name: timezone.split('/').pop().replace(/_/g, ' '),
+                        time: formatTime(currentParts),
+                        sunrise: formatTime(sunriseParts),
+                        sunset: formatTime(sunsetParts),
+                        sunrisePercent: toPercent(sunriseParts),
+                        sunsetPercent: toPercent(sunsetParts),
+                        currentPercent: toPercent(currentParts)
+                    };
+                } catch (e) { console.error("Error getting time data for", timezone, e); return null; }
+            };
+
+            const updateTimeBars = () => {
+                const getCoordsForTz = (timezone) => {
+                    const city = timezone.split('/').pop();
+                    return TZ_COORDS[city] || state.userCoords;
+                }
+                const localData = getTimeData(state.localTimezone, state.date, state.userCoords);
+                const secondData = getTimeData(state.secondTimezone, state.date, getCoordsForTz(state.secondTimezone));
+                const showCurrentTime = isToday(state.date);
+
+                const renderBar = (containerId, data) => {
+                    const wrapper = document.getElementById(containerId).parentElement;
+                    if (!wrapper.querySelector('.timezone-label')) {
+                        const labelEl = document.createElement('div');
+                        labelEl.className = 'timezone-label';
+                        wrapper.appendChild(labelEl);
+                    }
+                    wrapper.querySelector('.timezone-label').textContent = data ? data.name : '...';
+                    const container = document.getElementById(containerId);
+                    if (!data) { container.innerHTML = ''; container.style.background = 'var(--card-bg)'; return; }
+
+                    const { sunrisePercent, sunsetPercent, currentPercent, time } = data;
+                    container.style.background = `linear-gradient(to top, var(--sky-night) 0%, var(--sky-night) ${sunrisePercent - 2}%, var(--sunrise-color) ${sunrisePercent}%, var(--sky-day) ${sunrisePercent + 5}%, var(--sky-day) ${sunsetPercent - 5}%, var(--sunset-color) ${sunsetPercent}%, var(--sky-night) ${sunsetPercent + 2}%, var(--sky-night) 100%)`;
+
+                    container.innerHTML = `
+                    <div class="time-marker sun-marker" style="top: ${sunrisePercent}%; --color: var(--sunrise-color);"></div>
+                    <div class="time-marker sun-marker" style="top: ${sunsetPercent}%; --color: var(--sunset-color);"></div>
+                    ${showCurrentTime ? `
+                    <div class="time-marker current-time-marker" style="top: ${currentPercent}%;">
+                         <div class="current-time-label">${time}</div>
+                         <div class="current-time-peg"></div>
+                    </div>
+                    ` : ''}
+                `;
+                };
+
+                renderBar('local-time-bar', localData);
+                renderBar('second-time-bar', secondData);
+
+                const scale = document.querySelector('.time-bar-scale');
+                if (scale && scale.children.length === 0) scale.innerHTML = [...Array(13)].map((_, i) => `<li>${String(i * 2).padStart(2, '0')}:00</li>`).join('');
+
+                const tooltip = document.getElementById('time-bars-tooltip');
+                if (tooltip) {
+                    const formatTime = (d) => d || 'N/A';
+                    tooltip.innerHTML = `<table class="w-full text-xs text-left"><thead><tr class="border-b border-gray-700"><th class="pb-1"></th><th class="pb-1">${localData ? localData.name : 'Local'}</th><th class="pb-1">${secondData ? secondData.name : 'Selected'}</th></tr></thead><tbody><tr><td class="pt-1 flex items-center gap-2"><i class="fa-solid fa-clock w-4 text-center"></i> Time</td><td>${formatTime(localData && localData.time)}</td><td>${formatTime(secondData && secondData.time)}</td></tr><tr><td class="flex items-center gap-2"><i class="fa-solid fa-sun w-4 text-center text-yellow-400"></i> Sunrise</td><td>${formatTime(localData && localData.sunrise)}</td><td>${formatTime(secondData && secondData.sunrise)}</td></tr><tr><td class="flex items-center gap-2"><i class="fa-solid fa-moon w-4 text-center text-blue-300"></i> Sunset</td><td>${formatTime(localData && localData.sunset)}</td><td>${formatTime(secondData && secondData.sunset)}</td></tr></tbody></table>`;
+                }
+            };
+
+            const initModals = () => {
+                const helpModal = document.getElementById('help-modal'); const settingsModal = document.getElementById('settings-modal');
+                document.addEventListener('click', e => {
+                    const helpTrigger = e.target.closest('[data-help-id]');
+                    if (helpTrigger) {
+                        const helpId = helpTrigger.dataset.helpId;
+                        const { title, text } = HELP_TEXT[helpId];
+                        document.getElementById('help-modal-title').textContent = title;
+                        document.getElementById('help-modal-content').textContent = text;
+                        helpModal.classList.add('visible');
+                    }
+                });
+                document.getElementById('settings-btn').addEventListener('click', () => settingsModal.classList.add('visible'));
+                [helpModal, settingsModal].forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.id.includes('-close')) m.classList.remove('visible'); }));
+            };
+
+            const populateTimezones = async () => {
+                try {
+                    const response = await fetch('https://worldtimeapi.org/api/timezone');
+                    state.timezones = await response.json();
+                    const select = document.getElementById('timezone-select');
+                    select.innerHTML = state.timezones.map(tz => `<option value="${tz}" ${tz === state.secondTimezone ? 'selected' : ''}>${tz.replace(/_/g, ' ')}</option>`).join('');
+                    select.onchange = (e) => { state.secondTimezone = e.target.value; updateTimeBars(); };
+                } catch (e) { console.error("Failed to load timezones:", e); }
+            };
+
+            window.changeMonth = (delta) => {
+                state.date.setDate(1);
+                state.date.setMonth(state.date.getMonth() + delta);
+                renderHeader();
+                updateTimeBars();
+            };
+            window.selectCalendarDate = (day) => {
+                state.date.setDate(day);
+                renderHeader();
+                updateTimeBars();
+            };
+            window.goToToday = () => {
+                state.date = new Date();
+                renderHeader();
+                updateTimeBars();
+            };
+
+            window.addItem = (listName, limit) => { if (state.lists[listName].length < limit) { const item = { text: '', completed: false }; if (listName === 'calls') item.icon = 'call'; if (listName === 'appointments') item.icon = 'home'; if (listName === 'generalTodo') item.icon = 'office'; if (listName === 'fitness') { item.icon = 'walk'; item.duration = { hours: 0, minutes: 0 }; } if (listName === 'expenses') item.amount = ''; state.lists[listName].push(item); renderAllSections(); } };
+            window.deleteItem = (listName, index) => { state.lists[listName].splice(index, 1); renderAllSections(); };
+            window.updateItemText = (listName, index, text) => { state.lists[listName][index].text = text; updateProgress(); };
+            window.toggleItemComplete = (listName, index) => { state.lists[listName][index].completed = !state.lists[listName][index].completed; renderAllSections(); };
+            window.updateItemIcon = (listName, index, icon) => { state.lists[listName][index].icon = icon; renderAllSections(); };
+            window.updateItemTime = (listName, index, time) => { state.lists[listName][index].time = time; };
+            window.updateItemDuration = (listName, index, el) => { if (!state.lists[listName][index].duration) state.lists[listName][index].duration = {}; state.lists[listName][index].duration[el.dataset.type] = parseInt(el.value); renderAllSections(); };
+            window.updateSleepDuration = (el) => { state.sleepDuration[el.dataset.type] = parseInt(el.value); renderAllSections(); };
+            window.updateItemAmount = (listName, index, amount) => { state.lists[listName][index].amount = amount; renderAllSections(); };
+            window.updateCurrency = (currency) => { state.currency = currency; renderAllSections(); };
+            window.updateFoodText = (meal, text) => state.food[meal].text = text;
+            window.updateFoodTime = (meal, time) => state.food[meal].time = time;
+            window.updateWater = (count) => { state.water = count; renderNutritionCard(); };
+            window.updateNoteText = (type, text) => { state.notes[type] = text; };
+            window.updateNoteFontSize = (type, size) => { state.notes[`${type}FontSize`] = size; renderNotes(); };
+            window.updateRating = (type, value) => { state.ratings[type] = state.ratings[type] === value ? 0 : value; renderRateDay(); };
+
+            // *** CHANGE ***: Refactored all timer functions
+            const tickPomodoro = () => {
+                state.timer.pomodoro.remaining--;
+                if (state.timer.pomodoro.remaining < 0) {
+                    pauseTimer('pomodoro', false); // Pause without re-render
+                    alert('Pomodoro complete!');
+                    resetTimer('pomodoro'); // Reset with re-render
+                } else {
+                    renderTimerCard();
+                }
+            };
+            const tickStopwatch = () => {
+                state.timer.stopwatch.elapsed++;
+                renderTimerCard();
+            };
+            window.startTimer = (type) => {
+                if (type === 'pomodoro') {
+                    if (state.timer.pomodoro.intervalId) clearInterval(state.timer.pomodoro.intervalId);
+                    state.timer.pomodoro.running = true;
+                    state.timer.pomodoro.intervalId = setInterval(tickPomodoro, 1000);
+                } else if (type === 'stopwatch') {
+                    if (state.timer.stopwatch.intervalId) clearInterval(state.timer.stopwatch.intervalId);
+                    state.timer.stopwatch.running = true;
+                    state.timer.stopwatch.intervalId = setInterval(tickStopwatch, 1000);
+                }
+                renderTimerCard();
+            };
+            window.pauseTimer = (type, render = true) => {
+                if (type === 'pomodoro') {
+                    if (state.timer.pomodoro.intervalId) clearInterval(state.timer.pomodoro.intervalId);
+                    state.timer.pomodoro.intervalId = null;
+                    state.timer.pomodoro.running = false;
+                } else if (type === 'stopwatch') {
+                    if (state.timer.stopwatch.intervalId) clearInterval(state.timer.stopwatch.intervalId);
+                    state.timer.stopwatch.intervalId = null;
+                    state.timer.stopwatch.running = false;
+                }
+                if (render) renderTimerCard();
+            };
+            window.resetTimer = (type) => {
+                pauseTimer(type, false); // Pause without re-rendering
+                if (type === 'pomodoro') {
+                    state.timer.pomodoro.remaining = state.timer.pomodoro.duration;
+                } else if (type === 'stopwatch') {
+                    state.timer.stopwatch.elapsed = 0;
+                }
+                renderTimerCard();
+            };
+            // Removed switchTimerMode function
+
+            // Hooks for auth and data
+            const renderUserHeader = () => {
+                const header = document.querySelector('header .flex.items-center.gap-6:last-child');
+                if (header && !document.getElementById('logout-btn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'logout-btn';
+                    btn.innerHTML = '<i class="fa-solid fa-right-from-bracket text-xl"></i>';
+                    btn.className = 'text-gray-400 hover:text-white ml-4';
+                    btn.onclick = logout;
+                    header.appendChild(btn);
+                }
+            };
+
+            const loadData = async (date) => {
+                if (!authToken) return;
+                const dateStr = date.toISOString().split('T')[0];
+                try {
+                    const res = await fetch(`${API_URL}/api/entry/${dateStr}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (res.status === 401 || res.status === 403) { logout(); return; }
+
+                    const data = await res.json();
+                    if (data) {
+                        state.lists = data.lists || state.lists;
+                        state.food = data.food || state.food;
+                        state.water = data.water || 0;
+                        state.notes = data.notes || state.notes;
+                        state.ratings = data.ratings || state.ratings;
+                        state.sleepDuration = data.sleepDuration || state.sleepDuration;
+                        state.currency = data.currency || state.currency;
+                    } else {
+                        state.lists = { priorities: [], calls: [], appointments: [], generalTodo: [], schedule: [], fitness: [], expenses: [] };
+                        state.food = { breakfast: { text: '', time: '' }, lunch: { text: '', time: '' }, dinner: { text: '', time: '' } };
+                        state.water = 8;
+                        state.notes = { today: '', tomorrow: '', todayFontSize: '14', tomorrowFontSize: '14' };
+                        state.ratings = { productivity: 0, mood: 0, health: 0 };
+                        state.sleepDuration = { hours: 0, minutes: 0 };
+                    }
+                    renderAllSections();
+                } catch (e) {
+                    console.error("Failed to load data", e);
+                }
+            };
+
+            const saveData = async () => {
+                if (!authToken) return;
+                const dateStr = state.date.toISOString().split('T')[0];
+                const dataToSave = {
+                    lists: state.lists,
+                    food: state.food,
+                    water: state.water,
+                    notes: state.notes,
+                    ratings: state.ratings,
+                    sleepDuration: state.sleepDuration,
+                    currency: state.currency
+                };
+                try {
+                    await fetch(`${API_URL}/api/entry`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({ date: dateStr, data: dataToSave })
+                    });
+                } catch (e) { console.error("Failed to save data", e); }
+            };
+
+            let saveTimeout;
+            const triggerSave = () => {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveData, 1000);
+            };
+
+            const wrapUpdate = (fnName) => {
+                const original = window[fnName];
+                window[fnName] = (...args) => {
+                    original(...args);
+                    triggerSave();
+                };
+            };
+
+            ['addItem', 'deleteItem', 'updateItemText', 'toggleItemComplete',
+                'updateItemIcon', 'updateItemTime', 'updateItemDuration', 'updateSleepDuration',
+                'updateItemAmount', 'updateCurrency', 'updateFoodText', 'updateFoodTime',
+                'updateWater', 'updateNoteText', 'updateNoteFontSize', 'updateRating'].forEach(wrapUpdate);
+
+            const hookDatePicker = () => {
+                const datePicker = document.getElementById('date-picker');
+                const oldHandler = datePicker.onchange;
+                datePicker.onchange = async (e) => {
+                    if (oldHandler) oldHandler(e);
+                    await loadData(state.date);
+                };
+            };
+
+            const hookWindowFunctions = () => {
+                const oldChangeMonth = window.changeMonth;
+                window.changeMonth = (delta) => { oldChangeMonth(delta); loadData(state.date); };
+                const oldSelectDate = window.selectCalendarDate;
+                window.selectCalendarDate = (day) => { oldSelectDate(day); loadData(state.date); };
+                const oldGoToToday = window.goToToday;
+                window.goToToday = () => { oldGoToToday(); loadData(state.date); };
+            };
+
+            const authModal = document.getElementById('auth-modal');
+            const authTitle = document.getElementById('auth-title');
+            const authSubmit = document.getElementById('auth-submit');
+            const authSwitch = document.getElementById('auth-switch');
+            const usernameInput = document.getElementById('auth-username');
+            const passwordInput = document.getElementById('auth-password');
+            let isLogin = true;
+
+            authSwitch.onclick = () => {
+                isLogin = !isLogin;
+                authTitle.textContent = isLogin ? 'Login' : 'Register';
+                authSubmit.textContent = isLogin ? 'Login' : 'Register';
+                authSwitch.textContent = isLogin ? "Don't have an account? Register" : "Already have an account? Login";
+            };
+
+            authSubmit.onclick = async () => {
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                const endpoint = isLogin ? '/auth/login' : '/auth/register';
+                try {
+                    const res = await fetch(`${API_URL}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        if (isLogin) {
+                            authToken = data.token;
+                            localStorage.setItem('authToken', authToken);
+                            currentUser = data.username;
+                            authModal.classList.remove('visible');
+                            initApp();
+                        } else {
+                            alert('Registration successful! Please login.');
+                            authSwitch.click();
+                        }
+                    } else { alert(data.error); }
+                } catch (e) {
+                    console.error(e);
+                    alert('An error occurred');
+                }
+            };
+
+            const logout = () => {
+                localStorage.removeItem('authToken');
+                location.reload();
+            };
+
+            const init = () => {
+                try { state.localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { console.warn("Could not detect timezone. Defaulting."); }
+                renderHeader(); renderAllSections(); initModals(); populateTimezones();
+                const geoSuccess = (pos) => { state.userCoords = { lat: pos.coords.latitude, lon: pos.longitude }; updateTimeBars(); };
+                const geoError = () => { console.warn("Geolocation failed. Defaulting to India."); updateTimeBars(); };
+                if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(geoSuccess, geoError); } else { geoError(); }
+
+                updateTimeBars();
+                setInterval(() => {
+                    const now = new Date();
+                    if (isToday(state.date)) {
+                        state.date = now;
+                        updateTimeBars();
+                        if (now.getHours() === 23 && now.getMinutes() === 59) { setTimeout(renderHeader, 60000); }
+                    } else if (isToday(new Date())) { renderHeader(); }
+                }, 60000);
+
+                // *** NEW: Auth & Hooks ***
+                renderUserHeader();
+                hookDatePicker();
+                hookWindowFunctions();
+                loadData(state.date);
+            };
+
+            // This 'init' corresponds to the 'initApp' called in the start listener
+            init();
+        }; // End of initApp replacement
+    </script>
+
+</body>
+
+</html>
